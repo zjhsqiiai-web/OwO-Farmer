@@ -33,10 +33,11 @@ BASE_BET = int(os.getenv("BASE_BET", 1000))
 MAX_BET = int(os.getenv("MAX_BET", 1000000))
 FARMING_ENABLED = os.getenv("FARMING_ENABLED", "true").lower() == "true"
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-MODEL_URL = os.getenv("CAPTCHA_MODEL_URL", "https://github.com/owo-dusk/captcha-solver/releases/download/v1.0/captcha_model.onnx")
-
-# Parse tokens
-TOKENS = [t.strip() for t in TOKENS_STR.split(",") if t.strip()]
+# Disable captcha model download (the URL is dead)
+MODEL_URL = ""
+os.environ["CAPTCHA_MODEL_URL"] = ""
+# HARDCODE TOKEN TO BYPASS RAILWAY ENV BUG
+TOKENS = ["MTUzODc4MDgwNzg4NjI3ODY5Mg.GPs8Ro.FHA5vEj0IDAP81xuEvY3M85U7cQuSSMbNRrILo"]
 
 # ============================================================
 # LOGGING
