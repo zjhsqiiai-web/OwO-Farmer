@@ -1,14 +1,14 @@
 # ============================================================
-# ULTIMATE OWO GRINDER - USING DISCORD.PY-SELF
+# ULTIMATE OWO GRINDER - USING SELFBOT.PY
 # ============================================================
 
-import discord
 import asyncio
 import random
 import logging
 import os
 import sys
 from datetime import datetime, timedelta
+from selfbot import Client
 
 # ============================================================
 # TOKEN - HARDCODED WITH SPLIT TRICK
@@ -93,8 +93,8 @@ class OwOClient:
         self.break_until = datetime.now()
     
     async def start(self):
-        logger.info("🚀 Starting OwO Grinder with discord.py-self")
-        self.client = discord.Client()
+        logger.info("🚀 Starting OwO Grinder with selfbot.py")
+        self.client = Client()
         
         @self.client.event
         async def on_ready():
@@ -112,6 +112,7 @@ class OwOClient:
     async def send(self, cmd: str):
         channel = self.client.get_channel(self.channel_id)
         if not channel:
+            logger.warning(f"Channel {self.channel_id} not found")
             return
         await channel.send(cmd)
         await asyncio.sleep(random.uniform(0.2, 0.6))
@@ -211,4 +212,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     client = OwOClient()
-    asyncio.run(client.start())
+    try:
+        asyncio.run(client.start())
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
