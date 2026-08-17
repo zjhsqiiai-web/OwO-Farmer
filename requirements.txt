@@ -1,5 +1,5 @@
 discord.py==1.7.3
-aiohttp
+aiohttp>=3.9.0
 requests
 Pillow
 numpy
