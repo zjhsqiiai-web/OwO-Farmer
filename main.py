@@ -1,5 +1,5 @@
 # ============================================================
-# ULTIMATE OWO GRINDER - RAILWAY OPTIMIZED
+# ULTIMATE OWO GRINDER - FINAL, WORKING, NO-BS
 # ============================================================
 
 import discord
@@ -11,12 +11,30 @@ import sys
 from datetime import datetime, timedelta
 
 # ============================================================
-# READ DISCORD_TOKEN FROM ENV WITH CLEANUP
+# LOGGING SETUP - MUST BE FIRST
 # ============================================================
 
-TOKEN_RAW = os.getenv("DISCORD_TOKEN", "")
-logger.info(f"RAW TOKEN: {repr(TOKEN_RAW)}")  # This shows hidden characters
-logger.info(f"TOKEN LENGTH: {len(TOKEN_RAW)}")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("OwO-Grinder")
+
+# ============================================================
+# READ TOKENS FROM ENV WITH CLEANUP
+# ============================================================
+
+TOKEN_RAW = os.getenv("TOKENS", "")
+# Remove ALL whitespace and hidden characters (newline, carriage return, null, etc.)
+TOKEN = ''.join(TOKEN_RAW.split())  # split() strips all whitespace including newlines
+TOKENS = [TOKEN] if TOKEN else []
+
+# Log the token to see exactly what we got (for debugging)
+logger.info(f"RAW TOKEN (repr): {repr(TOKEN_RAW)}")
+logger.info(f"CLEANED TOKEN (repr): {repr(TOKEN)}")
+logger.info(f"TOKEN LENGTH: {len(TOKEN)}")
+logger.info(f"TOKENS list: {TOKENS}")
 
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 GAMBLING_ENABLED = os.getenv("GAMBLING_ENABLED", "true").lower() == "true"
@@ -26,16 +44,13 @@ MAX_BET = int(os.getenv("MAX_BET", 1000000))
 FARMING_ENABLED = os.getenv("FARMING_ENABLED", "true").lower() == "true"
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
-# ============================================================
-# LOGGING
-# ============================================================
+if not TOKENS:
+    logger.error("❌ No tokens found. Set TOKENS env var.")
+    sys.exit(1)
 
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger("OwO-Grinder")
+if not CHANNEL_ID:
+    logger.error("❌ CHANNEL_ID not set.")
+    sys.exit(1)
 
 # ============================================================
 # GAMBLING ENGINE
@@ -77,7 +92,7 @@ class GamblingEngine:
 
 class OwOClient:
     def __init__(self):
-        self.DISCORD_TOKEN = DISCORD_TOKEN
+        self.tokens = TOKENS
         self.channel_id = CHANNEL_ID
         self.clients = {}
         self.gambling = GamblingEngine()
@@ -88,12 +103,8 @@ class OwOClient:
         self.break_until = datetime.now()
     
     async def start(self):
-        logger.info(f"🚀 Starting with {len(self.DISCORD_TOKEN)} token(s)")
-        if not self.DISCORD_TOKEN:
-            logger.error("❌ No DISCORD_TOKEN found!")
-            return
-            
-        for token in self.DISCORD_TOKEN:
+        logger.info(f"🚀 Starting with {len(self.tokens)} token(s)")
+        for token in self.tokens:
             client = discord.Client()
             
             @client.event
@@ -207,14 +218,5 @@ if __name__ == "__main__":
     print("="*60)
     print("🔥 ULTIMATE OWO GRINDER 🔥")
     print("="*60)
-    
-    if not DISCORD_TOKEN:
-        logger.error("❌ No DISCORD_TOKEN found. Set DISCORD_TOKEN env var.")
-        sys.exit(1)
-        
-    if not CHANNEL_ID:
-        logger.error("❌ CHANNEL_ID not set.")
-        sys.exit(1)
-    
     client = OwOClient()
     asyncio.run(client.start())
