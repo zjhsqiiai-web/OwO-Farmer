@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 # TOKEN – SPLIT INTO 3 PARTS
 # ============================================================
 token_parts = [
-    "MTUzODgwNTgwNzMzMDYyNzYzNQ",  # Replace with your new token parts
-    "YG045yU",
-    "C-k2W1X_XFRo_NQX6OWmS7An0EPq6gdTGE5Vk0"
+    "MTUzODgwNTgwNzMzMDYyNzYzNQ",  # Part 1
+    "G045yU",                       # Part 2
+    "C-k2W1X_XFRo_NQX6OWmS7An0EPq6gdTGE5Vk0"  # Part 3
 ]
 TOKEN = ".".join(token_parts)
 
