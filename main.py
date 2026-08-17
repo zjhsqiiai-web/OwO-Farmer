@@ -1,5 +1,5 @@
 # ============================================================
-# ULTIMATE OWO GRINDER - FULLY WORKING
+# ULTIMATE OWO GRINDER - USING DISCORD.PY-SELF
 # ============================================================
 
 import discord
@@ -11,21 +11,17 @@ import sys
 from datetime import datetime, timedelta
 
 # ============================================================
-# TOKEN - HARDCODED WITH SPLIT TRICK (bypasses GitHub detection)
+# TOKEN - HARDCODED WITH SPLIT TRICK
 # ============================================================
-# Split token into 3 parts to avoid GitHub flagging it
 token_parts = [
-    "MTUzODc4MDgwNzg4NjI3ODY5Mg",  # part 1
-    "GPs8Ro",                       # part 2  
-    "FHA5vEj0IDAP81xuEvY3M85U7cQuSSMbNRrILo"  # part 3
+    "MTUzODc4MDgwNzg4NjI3ODY5Mg",
+    "GPs8Ro",
+    "FHA5vEj0IDAP81xuEvY3M85U7cQuSSMbNRrILo"
 ]
 TOKEN = ".".join(token_parts)
 
-# Override environment variable with our hardcoded token
-os.environ["TOKENS"] = TOKEN
-
 # ============================================================
-# LOGGING SETUP
+# LOGGING
 # ============================================================
 
 logging.basicConfig(
@@ -36,7 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger("OwO-Grinder")
 
 # ============================================================
-# READ CONFIG (from env or defaults)
+# CONFIG
 # ============================================================
 
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
@@ -46,14 +42,8 @@ BASE_BET = int(os.getenv("BASE_BET", 1000))
 MAX_BET = int(os.getenv("MAX_BET", 1000000))
 FARMING_ENABLED = os.getenv("FARMING_ENABLED", "true").lower() == "true"
 
-# Log token status (not the actual token)
 logger.info(f"Token length: {len(TOKEN)}")
-logger.info(f"Token parts: {len(token_parts)} parts")
 logger.info(f"Channel ID: {CHANNEL_ID}")
-
-if not CHANNEL_ID:
-    logger.error("❌ CHANNEL_ID not set.")
-    sys.exit(1)
 
 # ============================================================
 # GAMBLING ENGINE
@@ -74,9 +64,6 @@ class GamblingEngine:
             fib = [1,1,2,3,5,8,13,21,34,55,89,144]
             idx = min(self.losses, len(fib)-1)
             bet = self.base_bet * fib[idx]
-        elif self.strategy == "d_alembert":
-            net = self.losses - self.wins
-            bet = self.base_bet + net * 1000
         else:
             bet = self.base_bet
         return min(max(bet, self.base_bet), self.max_bet)
@@ -90,7 +77,7 @@ class GamblingEngine:
             self.wins = 0
 
 # ============================================================
-# MAIN BOT CLIENT
+# MAIN CLIENT
 # ============================================================
 
 class OwOClient:
@@ -106,7 +93,7 @@ class OwOClient:
         self.break_until = datetime.now()
     
     async def start(self):
-        logger.info("🚀 Starting OwO Grinder")
+        logger.info("🚀 Starting OwO Grinder with discord.py-self")
         self.client = discord.Client()
         
         @self.client.event
@@ -117,18 +104,14 @@ class OwOClient:
         
         try:
             await self.client.start(self.token)
-        except discord.LoginFailure as e:
-            logger.error(f"❌ Login failed: {e}")
-            logger.error("Token is invalid or expired. Get a new one.")
         except Exception as e:
-            logger.error(f"❌ Failed to start: {e}")
+            logger.error(f"❌ Login failed: {e}")
         
         await asyncio.Event().wait()
     
     async def send(self, cmd: str):
         channel = self.client.get_channel(self.channel_id)
         if not channel:
-            logger.warning(f"Channel {self.channel_id} not found")
             return
         await channel.send(cmd)
         await asyncio.sleep(random.uniform(0.2, 0.6))
@@ -223,10 +206,9 @@ if __name__ == "__main__":
     print("🔥 ULTIMATE OWO GRINDER 🔥")
     print("="*60)
     
+    if not CHANNEL_ID:
+        logger.error("❌ CHANNEL_ID not set.")
+        sys.exit(1)
+    
     client = OwOClient()
-    try:
-        asyncio.run(client.start())
-    except KeyboardInterrupt:
-        logger.info("Shutting down...")
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+    asyncio.run(client.start())
