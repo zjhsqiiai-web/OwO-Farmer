@@ -1,8 +1,8 @@
 # ============================================================
-# ULTIMATE OWO GRINDER - FINAL WORKING VERSION
+# ULTIMATE OWO GRINDER - PURE REST API (NO DISCORD.PY)
 # ============================================================
 
-import discord
+import aiohttp
 import asyncio
 import random
 import logging
@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 # ============================================================
 # YOUR TOKEN - SPLIT INTO 3 PARTS
-# GET FRESH TOKEN: F12 -> Network -> authorization header
 # ============================================================
 token_parts = [
     "MTUzODc4MDgwNzg4NjI3ODY5Mg",
@@ -22,7 +21,7 @@ token_parts = [
 TOKEN = ".".join(token_parts)
 
 # ============================================================
-# CHANNEL ID - ONLY ENV VAR NEEDED
+# CHANNEL ID - ENV VAR
 # ============================================================
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 if not CHANNEL_ID:
@@ -38,8 +37,47 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("OwO-Grinder")
+
 logger.info(f"Token length: {len(TOKEN)}")
 logger.info(f"Channel ID: {CHANNEL_ID}")
+
+# ============================================================
+# DISCORD REST API CLIENT
+# ============================================================
+class DiscordREST:
+    def __init__(self, token, channel_id):
+        self.token = token
+        self.channel_id = channel_id
+        self.base_url = "https://discord.com/api/v9"
+        self.headers = {
+            "Authorization": token,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "Content-Type": "application/json"
+        }
+        self.session = None
+    
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, *args):
+        await self.session.close()
+    
+    async def send_message(self, content: str) -> bool:
+        """Send a message to the channel via REST API."""
+        url = f"{self.base_url}/channels/{self.channel_id}/messages"
+        payload = {"content": content}
+        try:
+            async with self.session.post(url, headers=self.headers, json=payload) as resp:
+                if resp.status == 200 or resp.status == 201:
+                    return True
+                else:
+                    text = await resp.text()
+                    logger.error(f"Send failed: {resp.status} - {text}")
+                    return False
+        except Exception as e:
+            logger.error(f"Request error: {e}")
+            return False
 
 # ============================================================
 # GAMBLING ENGINE
@@ -64,59 +102,46 @@ class GamblingEngine:
             self.wins = 0
 
 # ============================================================
-# MAIN CLIENT
+# MAIN BOT
 # ============================================================
 class OwOClient:
     def __init__(self):
         self.token = TOKEN
         self.channel_id = CHANNEL_ID
-        self.client = None
         self.gambling = GamblingEngine()
-        self.stats = {}
+        self.stats = {"hunts":0, "battles":0, "gambles":0}
         self.running = True
         self.last_actions = {k: datetime.now() - timedelta(days=1) for k in 
                              ["daily","vote","quest","pray","boss","battle"]}
         self.break_until = datetime.now()
+        self.rest = None
     
     async def start(self):
-        logger.info("🚀 Starting OwO Grinder")
-        
-        # Create client with custom headers to avoid detection
-        self.client = discord.Client()
-        
-        @self.client.event
-        async def on_ready():
-            logger.info(f"✅ Logged in as {self.client.user.name}")
-            self.stats[self.client.user.id] = {"hunts":0, "battles":0, "gambles":0}
-            asyncio.create_task(self.farming_loop())
-        
-        try:
-            # Try to login
-            await self.client.start(self.token)
-        except discord.LoginFailure as e:
-            logger.error(f"❌ Login failed: {e}")
-            logger.error("Token is invalid. Get a fresh one from Discord.")
-            logger.error("Open Discord in browser -> F12 -> Network -> find 'authorization' header -> copy value")
-            sys.exit(1)
-        except Exception as e:
-            logger.error(f"❌ Unexpected error: {e}")
-            sys.exit(1)
-        
-        await asyncio.Event().wait()
+        logger.info("🚀 Starting OwO Grinder (REST mode)")
+        async with DiscordREST(self.token, self.channel_id) as rest:
+            self.rest = rest
+            # Test the token by sending a test message (or just send a harmless command)
+            logger.info("🔍 Testing token...")
+            test_result = await rest.send_message("owo ping")
+            if test_result:
+                logger.info("✅ Token works! Sending 'owo ping' successful.")
+            else:
+                logger.error("❌ Token test failed. Check token or channel ID.")
+                return
+            
+            # Start farming loop
+            await self.farming_loop()
     
     async def send(self, cmd: str):
-        try:
-            channel = self.client.get_channel(self.channel_id)
-            if not channel:
-                logger.warning(f"Channel {self.channel_id} not found")
-                return
-            await channel.send(cmd)
+        """Send a command using REST."""
+        if not self.rest:
+            return False
+        success = await self.rest.send_message(cmd)
+        if success:
             await asyncio.sleep(random.uniform(0.3, 0.7))
-        except Exception as e:
-            logger.error(f"Send error: {e}")
+        return success
     
     async def farming_loop(self):
-        logger.info("🔄 Starting farming loop...")
         while self.running:
             try:
                 if datetime.now() < self.break_until:
@@ -130,22 +155,18 @@ class OwOClient:
                     await self.send("owo daily")
                     self.last_actions["daily"] = now
                     await asyncio.sleep(2)
-                    
                 if (now - self.last_actions["vote"]).total_seconds() > 86400:
                     await self.send("owo vote")
                     self.last_actions["vote"] = now
                     await asyncio.sleep(2)
-                    
                 if (now - self.last_actions["quest"]).total_seconds() > 86400:
                     await self.send("owo quest")
                     self.last_actions["quest"] = now
                     await asyncio.sleep(2)
-                    
                 if (now - self.last_actions["pray"]).total_seconds() > 300:
                     await self.send("owo pray")
                     self.last_actions["pray"] = now
                     await asyncio.sleep(1)
-                    
                 if (now - self.last_actions["boss"]).total_seconds() > 3600:
                     await self.send("owo boss")
                     self.last_actions["boss"] = now
@@ -153,12 +174,12 @@ class OwOClient:
                 
                 # Hunt
                 await self.send("owo hunt")
-                self.stats[self.client.user.id]["hunts"] += 1
+                self.stats["hunts"] += 1
                 
                 # Battle
                 if random.random() < 0.2:
                     await self.send("owo battle")
-                    self.stats[self.client.user.id]["battles"] += 1
+                    self.stats["battles"] += 1
                     await asyncio.sleep(2)
                 
                 # Inventory management
@@ -175,8 +196,8 @@ class OwOClient:
                     bet = self.gambling.next_bet()
                     game = random.choice(["cf", "slots"])
                     await self.send(f"owo {game} {bet}")
-                    self.stats[self.client.user.id]["gambles"] += 1
-                    # Simulate result
+                    self.stats["gambles"] += 1
+                    # Simulate result (we can't know real result without parsing)
                     if random.random() < 0.5:
                         self.gambling.record(True)
                     else:
@@ -200,7 +221,7 @@ class OwOClient:
 # ============================================================
 if __name__ == "__main__":
     print("="*60)
-    print("🔥 ULTIMATE OWO GRINDER 🔥")
+    print("🔥 ULTIMATE OWO GRINDER (REST) 🔥")
     print("="*60)
     client = OwOClient()
     try:
