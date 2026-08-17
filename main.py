@@ -11,14 +11,12 @@ import sys
 from datetime import datetime, timedelta
 
 # ============================================================
-# READ TOKENS FROM ENV WITH CLEANUP
+# READ DISCORD_TOKEN FROM ENV WITH CLEANUP
 # ============================================================
 
-# Get token from env and clean it
-TOKEN_RAW = os.getenv("TOKENS", "")
-# Remove any hidden characters, newlines, spaces
-TOKEN = ''.join(TOKEN_RAW.split())
-TOKENS = [TOKEN] if TOKEN else []
+TOKEN_RAW = os.getenv("DISCORD_TOKEN", "")
+logger.info(f"RAW TOKEN: {repr(TOKEN_RAW)}")  # This shows hidden characters
+logger.info(f"TOKEN LENGTH: {len(TOKEN_RAW)}")
 
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 GAMBLING_ENABLED = os.getenv("GAMBLING_ENABLED", "true").lower() == "true"
@@ -79,7 +77,7 @@ class GamblingEngine:
 
 class OwOClient:
     def __init__(self):
-        self.tokens = TOKENS
+        self.DISCORD_TOKEN = DISCORD_TOKEN
         self.channel_id = CHANNEL_ID
         self.clients = {}
         self.gambling = GamblingEngine()
@@ -90,12 +88,12 @@ class OwOClient:
         self.break_until = datetime.now()
     
     async def start(self):
-        logger.info(f"🚀 Starting with {len(self.tokens)} token(s)")
-        if not self.tokens:
-            logger.error("❌ No tokens found!")
+        logger.info(f"🚀 Starting with {len(self.DISCORD_TOKEN)} token(s)")
+        if not self.DISCORD_TOKEN:
+            logger.error("❌ No DISCORD_TOKEN found!")
             return
             
-        for token in self.tokens:
+        for token in self.DISCORD_TOKEN:
             client = discord.Client()
             
             @client.event
@@ -210,8 +208,8 @@ if __name__ == "__main__":
     print("🔥 ULTIMATE OWO GRINDER 🔥")
     print("="*60)
     
-    if not TOKENS:
-        logger.error("❌ No tokens found. Set TOKENS env var.")
+    if not DISCORD_TOKEN:
+        logger.error("❌ No DISCORD_TOKEN found. Set DISCORD_TOKEN env var.")
         sys.exit(1)
         
     if not CHANNEL_ID:
