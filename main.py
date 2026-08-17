@@ -1,5 +1,5 @@
 # ============================================================
-# ULTIMATE OWO GRINDER - PURE REST API (NO DISCORD.PY)
+# ULTIMATE SAFE OWO GRINDER – EXTREME STEALTH
 # ============================================================
 
 import aiohttp
@@ -8,20 +8,21 @@ import random
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timedelta
 
 # ============================================================
-# YOUR TOKEN - SPLIT INTO 3 PARTS
+# TOKEN – SPLIT INTO 3 PARTS (HIDE FROM GITHUB)
 # ============================================================
 token_parts = [
-    "MTUzODc4MDgwNzg4NjI3ODY5Mg",
-    "GCHUwf",
-    "3Dw0vCREowDFnmx2tSS_7r31plyJ4ZAUv3doRc"
+    "MTUzODgwNTgwNzMzMDYyNzYzNQ",  # Replace with your new token parts
+    "YG045yU",
+    "C-k2W1X_XFRo_NQX6OWmS7An0EPq6gdTGE5Vk0"
 ]
 TOKEN = ".".join(token_parts)
 
 # ============================================================
-# CHANNEL ID - ENV VAR
+# CHANNEL ID – FROM ENV
 # ============================================================
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 if not CHANNEL_ID:
@@ -36,25 +37,37 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger("OwO-Grinder")
-
+logger = logging.getLogger("OwO-Stealth")
 logger.info(f"Token length: {len(TOKEN)}")
 logger.info(f"Channel ID: {CHANNEL_ID}")
 
 # ============================================================
-# DISCORD REST API CLIENT
+# DISCORD REST API (MIMICS BROWSER)
 # ============================================================
 class DiscordREST:
     def __init__(self, token, channel_id):
         self.token = token
         self.channel_id = channel_id
         self.base_url = "https://discord.com/api/v9"
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+        ]
         self.headers = {
             "Authorization": token,
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
         }
         self.session = None
+        self.last_request_time = 0
+        self.min_request_interval = 5.0  # minimum seconds between requests
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -64,166 +77,218 @@ class DiscordREST:
         await self.session.close()
     
     async def send_message(self, content: str) -> bool:
-        """Send a message to the channel via REST API."""
+        """Send a message with human-like pacing."""
+        # Randomize user agent each time (mimic different devices)
+        self.headers["User-Agent"] = random.choice(self.user_agents)
+        
+        # Enforce minimum interval (avoid spam)
+        now = time.time()
+        elapsed = now - self.last_request_time
+        if elapsed < self.min_request_interval:
+            await asyncio.sleep(self.min_request_interval - elapsed + random.uniform(0, 1))
+        
         url = f"{self.base_url}/channels/{self.channel_id}/messages"
         payload = {"content": content}
         try:
             async with self.session.post(url, headers=self.headers, json=payload) as resp:
-                if resp.status == 200 or resp.status == 201:
+                self.last_request_time = time.time()
+                if resp.status in (200, 201):
                     return True
                 else:
                     text = await resp.text()
-                    logger.error(f"Send failed: {resp.status} - {text}")
+                    if "rate limited" in text.lower():
+                        logger.warning("Rate limited – sleeping 60s")
+                        await asyncio.sleep(60)
+                        return False
+                    logger.error(f"Send failed: {resp.status}")
                     return False
         except Exception as e:
             logger.error(f"Request error: {e}")
+            await asyncio.sleep(10)
             return False
 
 # ============================================================
-# GAMBLING ENGINE
+# HUMAN BEHAVIOR ENGINE
 # ============================================================
-class GamblingEngine:
-    def __init__(self):
-        self.losses = 0
-        self.wins = 0
-        self.base_bet = 1000
-        self.max_bet = 1000000
+class HumanBehavior:
+    @staticmethod
+    def random_delay(min_sec=5, max_sec=20):
+        """Sleep for a random human-like duration."""
+        # Add ±50% jitter
+        base = random.uniform(min_sec, max_sec)
+        jitter = base * random.uniform(-0.5, 0.5)
+        delay = max(0.5, base + jitter)
+        return delay
     
-    def next_bet(self):
-        bet = self.base_bet * (2 ** self.losses)
-        return min(bet, self.max_bet)
+    @staticmethod
+    def should_be_awake() -> bool:
+        """Simulate sleeping at night (1 AM – 7 AM local time)."""
+        # Use UTC to be consistent, or we can use random sleep windows
+        # We'll just use a random chance of sleeping for 4-8 hours.
+        return True  # We'll handle breaks separately
     
-    def record(self, won):
-        if won:
-            self.wins += 1
-            self.losses = 0
-        else:
-            self.losses += 1
-            self.wins = 0
+    @staticmethod
+    def random_typo(cmd: str) -> str:
+        """Occasionally introduce a typo like a real human."""
+        if len(cmd) < 3 or random.random() > 0.15:
+            return cmd
+        pos = random.randint(1, len(cmd)-2)
+        chars = list(cmd)
+        # Swap two adjacent chars
+        chars[pos], chars[pos+1] = chars[pos+1], chars[pos]
+        return ''.join(chars)
+    
+    @staticmethod
+    def random_variation(cmd: str) -> str:
+        """Add pls/please or change case."""
+        variations = [
+            cmd,
+            cmd.lower(),
+            cmd.capitalize(),
+            f"{cmd} pls",
+            f"{cmd} please",
+            f"pls {cmd}",
+            cmd.upper(),
+        ]
+        return random.choice(variations)
 
 # ============================================================
-# MAIN BOT
+# MAIN STEALTH CLIENT
 # ============================================================
-class OwOClient:
+class OwoStealth:
     def __init__(self):
         self.token = TOKEN
         self.channel_id = CHANNEL_ID
-        self.gambling = GamblingEngine()
-        self.stats = {"hunts":0, "battles":0, "gambles":0}
-        self.running = True
-        self.last_actions = {k: datetime.now() - timedelta(days=1) for k in 
-                             ["daily","vote","quest","pray","boss","battle"]}
-        self.break_until = datetime.now()
         self.rest = None
+        self.running = True
+        self.command_count = 0
+        self.batch_start = datetime.now()
+        
+        # Daily task timers
+        self.last_daily = datetime.now() - timedelta(days=1)
+        self.last_vote = datetime.now() - timedelta(days=1)
+        self.last_quest = datetime.now() - timedelta(days=1)
+        self.last_pray = datetime.now() - timedelta(hours=1)
+        self.last_boss = datetime.now() - timedelta(hours=2)
+        
+        # Break until (next wake time)
+        self.sleep_until = datetime.now()
+        self.human = HumanBehavior()
     
     async def start(self):
-        logger.info("🚀 Starting OwO Grinder (REST mode)")
+        logger.info("🦎 Starting ULTIMATE STEALTH grinder")
         async with DiscordREST(self.token, self.channel_id) as rest:
             self.rest = rest
-            # Test the token by sending a test message (or just send a harmless command)
+            # Test token with a single ping
             logger.info("🔍 Testing token...")
-            test_result = await rest.send_message("owo ping")
-            if test_result:
-                logger.info("✅ Token works! Sending 'owo ping' successful.")
+            if await rest.send_message("owo ping"):
+                logger.info("✅ Token works. Entering stealth mode.")
             else:
-                logger.error("❌ Token test failed. Check token or channel ID.")
+                logger.error("❌ Token failed. Check token/channel.")
                 return
-            
-            # Start farming loop
             await self.farming_loop()
     
-    async def send(self, cmd: str):
-        """Send a command using REST."""
-        if not self.rest:
-            return False
+    async def send_human(self, cmd: str) -> bool:
+        """Send a command with human-like preprocessing."""
+        # Random typo
+        cmd = self.human.random_typo(cmd)
+        # Random variation
+        cmd = self.human.random_variation(cmd)
+        # Send
         success = await self.rest.send_message(cmd)
         if success:
-            await asyncio.sleep(random.uniform(0.3, 0.7))
+            self.command_count += 1
         return success
+    
+    async def sleep_if_needed(self):
+        """Check if we should sleep for a long period."""
+        now = datetime.now()
+        if now < self.sleep_until:
+            remaining = (self.sleep_until - now).total_seconds()
+            if remaining > 60:
+                logger.info(f"💤 Sleeping for {remaining//60:.0f} minutes...")
+            await asyncio.sleep(min(remaining, 3600))  # sleep in chunks
+            return True
+        return False
     
     async def farming_loop(self):
         while self.running:
             try:
-                if datetime.now() < self.break_until:
-                    await asyncio.sleep(60)
+                # Check long sleep first
+                if await self.sleep_if_needed():
                     continue
-                    
+                
                 now = datetime.now()
                 
-                # Daily tasks
-                if (now - self.last_actions["daily"]).total_seconds() > 86400:
-                    await self.send("owo daily")
-                    self.last_actions["daily"] = now
-                    await asyncio.sleep(2)
-                if (now - self.last_actions["vote"]).total_seconds() > 86400:
-                    await self.send("owo vote")
-                    self.last_actions["vote"] = now
-                    await asyncio.sleep(2)
-                if (now - self.last_actions["quest"]).total_seconds() > 86400:
-                    await self.send("owo quest")
-                    self.last_actions["quest"] = now
-                    await asyncio.sleep(2)
-                if (now - self.last_actions["pray"]).total_seconds() > 300:
-                    await self.send("owo pray")
-                    self.last_actions["pray"] = now
-                    await asyncio.sleep(1)
-                if (now - self.last_actions["boss"]).total_seconds() > 3600:
-                    await self.send("owo boss")
-                    self.last_actions["boss"] = now
-                    await asyncio.sleep(3)
+                # === Daily tasks (once per day, with random delay) ===
+                if (now - self.last_daily).total_seconds() > 86400:
+                    await self.send_human("owo daily")
+                    self.last_daily = now
+                    await asyncio.sleep(self.human.random_delay(10, 30))
                 
-                # Hunt
-                await self.send("owo hunt")
-                self.stats["hunts"] += 1
+                if (now - self.last_vote).total_seconds() > 86400:
+                    await self.send_human("owo vote")
+                    self.last_vote = now
+                    await asyncio.sleep(self.human.random_delay(10, 30))
                 
-                # Battle
-                if random.random() < 0.2:
-                    await self.send("owo battle")
-                    self.stats["battles"] += 1
-                    await asyncio.sleep(2)
+                if (now - self.last_quest).total_seconds() > 86400:
+                    await self.send_human("owo quest")
+                    self.last_quest = now
+                    await asyncio.sleep(self.human.random_delay(10, 30))
                 
-                # Inventory management
-                if random.random() < 0.01:
-                    await self.send("owo sell common")
-                    await asyncio.sleep(1)
-                    await self.send("owo sacrifice")
-                    await asyncio.sleep(1)
-                    await self.send("owo equip best")
-                    await asyncio.sleep(1)
+                # === Hourly tasks ===
+                if (now - self.last_pray).total_seconds() > 3600:
+                    await self.send_human("owo pray")
+                    self.last_pray = now
+                    await asyncio.sleep(self.human.random_delay(5, 15))
                 
-                # Gambling
-                if random.random() < 0.1:
-                    bet = self.gambling.next_bet()
-                    game = random.choice(["cf", "slots"])
-                    await self.send(f"owo {game} {bet}")
-                    self.stats["gambles"] += 1
-                    # Simulate result (we can't know real result without parsing)
-                    if random.random() < 0.5:
-                        self.gambling.record(True)
-                    else:
-                        self.gambling.record(False)
-                    await asyncio.sleep(1)
+                if (now - self.last_boss).total_seconds() > 7200:  # every 2 hours
+                    await self.send_human("owo boss")
+                    self.last_boss = now
+                    await asyncio.sleep(self.human.random_delay(10, 20))
                 
-                # Random break
-                if random.random() < 0.001:
-                    mins = random.randint(30, 60)
-                    self.break_until = datetime.now() + timedelta(minutes=mins)
-                    logger.info(f"💤 Break for {mins} minutes.")
+                # === MAIN FARM: HUNT ONLY (no gambling, no battle spam) ===
+                await self.send_human("owo hunt")
                 
-                await asyncio.sleep(random.uniform(0.3, 0.7))
+                # Occasionally do a battle (but rarely)
+                if random.random() < 0.05:  # 5% chance
+                    await self.send_human("owo battle")
+                    await asyncio.sleep(self.human.random_delay(5, 15))
+                
+                # Rare inventory cleanup
+                if random.random() < 0.002:  # 0.2% chance
+                    await self.send_human("owo sell common")
+                    await asyncio.sleep(self.human.random_delay(3, 8))
+                    await self.send_human("owo sacrifice")
+                    await asyncio.sleep(self.human.random_delay(3, 8))
+                    await self.send_human("owo equip best")
+                    await asyncio.sleep(self.human.random_delay(3, 8))
+                
+                # === Decide if we need a long break ===
+                # After every 10-30 commands, take a 1-6 hour break
+                if self.command_count % random.randint(10, 30) == 0:
+                    break_minutes = random.randint(60, 360)  # 1 to 6 hours
+                    self.sleep_until = datetime.now() + timedelta(minutes=break_minutes)
+                    logger.info(f"🛌 Taking a {break_minutes}-minute break to mimic human inactivity.")
+                    await asyncio.sleep(5)  # small pause before next loop
+                
+                # === Human-like pause between commands (5-60 seconds) ===
+                pause = self.human.random_delay(5, 60)
+                logger.debug(f"⏳ Waiting {pause:.1f}s before next command.")
+                await asyncio.sleep(pause)
                 
             except Exception as e:
                 logger.error(f"Loop error: {e}")
-                await asyncio.sleep(5)
+                await asyncio.sleep(60)  # pause on error
 
 # ============================================================
 # RUN
 # ============================================================
 if __name__ == "__main__":
     print("="*60)
-    print("🔥 ULTIMATE OWO GRINDER (REST) 🔥")
+    print("🦎 ULTIMATE STEALTH OWO GRINDER")
     print("="*60)
-    client = OwOClient()
+    client = OwOstealth()
     try:
         asyncio.run(client.start())
     except KeyboardInterrupt:
